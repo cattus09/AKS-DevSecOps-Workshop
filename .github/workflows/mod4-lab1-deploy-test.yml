@@ -24,9 +24,6 @@ jobs:
       TEST_RESOURCE_GROUP: ${{ vars.TEST_RESOURCE_GROUP }}
       TEST_CLUSTER_NAME: ${{ vars.TEST_CLUSTER_NAME }}
       TEST_DEPLOYMENT_MANIFEST_PATH: ${{ vars.TEST_DEPLOYMENT_MANIFEST_PATH }}
-      TEST_AZURE_CLIENT_ID: ${{ secrets.TEST_AZURE_CLIENT_ID }}
-      TEST_AZURE_TENANT_ID: ${{ secrets.TEST_AZURE_TENANT_ID }}
-      TEST_AZURE_SUBSCRIPTION_ID: ${{ secrets.TEST_AZURE_SUBSCRIPTION_ID }}
 
     steps:
 
@@ -42,9 +39,7 @@ jobs:
       - name: Azure login
         uses: azure/login@v1
         with:
-          client-id: ${{ env.TEST_AZURE_CLIENT_ID }}
-          tenant-id: ${{ env.TEST_AZURE_TENANT_ID }}
-          subscription-id: ${{ env.TEST_AZURE_SUBSCRIPTION_ID }}
+          auth-type: 'managed-identity'
 
       - name: Pull a sample image from Docker hub to ACR
         run: |
