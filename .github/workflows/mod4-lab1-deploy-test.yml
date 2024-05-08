@@ -46,7 +46,7 @@ jobs:
       # So we will simplify the process. 
       - name: Pull a sample image from Docker hub to ACR
         run: |
-          az acr import --name ${{ env.TEST_AZURE_CONTAINER_REGISTRY }} --source docker.io/library/nginx:latest --image nginx:latest -g ${{ env.TEST_RESOURCE_GROUP }}
+          az acr import --name 'acr76ux7p6mfcdkc' --source docker.io/library/nginx:latest --image nginx:latest -g 'rg-aks-gha'
         continue-on-error: true
       # Builds and pushes an image up to your Azure Container Registry
       - name: Build and push image to ACR
@@ -64,8 +64,8 @@ jobs:
       - name: Get K8s context
         uses: azure/aks-set-context@v3
         with:
-          resource-group: ${{ env.TEST_RESOURCE_GROUP }}
-          cluster-name: ${{ env.TEST_CLUSTER_NAME }}
+          resource-group: 'rg-aks-gha'
+          cluster-name: 'devsecops-aks'
           admin: 'true'
           use-kubelogin: 'true'
       # Deploys application based on given manifest file
@@ -73,6 +73,6 @@ jobs:
         uses: Azure/k8s-deploy@v4
         with:
           action: deploy
-          manifests: ${{ env.TEST_DEPLOYMENT_MANIFEST_PATH }}
+          manifests: 'tools/deploy/module4/deployment-manifest-test-sample.yaml'
           images: | 
-            ${{ env.TEST_AZURE_CONTAINER_REGISTRY }}.azurecr.io/nginx:latest
+            acr76ux7p6mfcdkc.azurecr.io/nginx:latest
