@@ -6,12 +6,16 @@ on:
       - 'tools/deploy/module4/*text*'
   workflow_dispatch:
 
+env:
+  TEST_AZURE_CONTAINER_REGISTRY: ${{ vars.TEST_AZURE_CONTAINER_REGISTRY }}
+  TEST_RESOURCE_GROUP: ${{ vars.TEST_RESOURCE_GROUP }}
+  TEST_CLUSTER_NAME: ${{ vars.TEST_CLUSTER_NAME }}
+  TEST_DEPLOYMENT_MANIFEST_PATH: ${{ vars.TEST_DEPLOYMENT_MANIFEST_PATH }}
+
 permissions:
   id-token: write # This is required for requesting the JWT
-  contents: read # This is required for actions/checkout
-
+  contents: read  # This is required for actions/checkout
 jobs:
-
   PushImagetoACR:
     name: Push Sample Image to ACR and AKS
     environment: test
@@ -19,46 +23,44 @@ jobs:
       contents: read
       id-token: write
     runs-on: ubuntu-latest
-    env:
-      TEST_AZURE_CONTAINER_REGISTRY: ${{ vars.TEST_AZURE_CONTAINER_REGISTRY }}
-      TEST_RESOURCE_GROUP: ${{ vars.TEST_RESOURCE_GROUP }}
-      TEST_CLUSTER_NAME: ${{ vars.TEST_CLUSTER_NAME }}
-      TEST_DEPLOYMENT_MANIFEST_PATH: ${{ vars.TEST_DEPLOYMENT_MANIFEST_PATH }}
-
     steps:
-
       - name: Echo variables
         run: |
-          echo "TEST_AZURE_CONTAINER_REGISTRY: ${{ env.TEST_AZURE_CONTAINER_REGISTRY }}";
+          echo "TEST_AZURE_CONTAINER_REGISTRY: ${{ env.TEST_AZURE_CONTAINER_REGISTRY }}"; 
           echo "TEST_RESOURCE_GROUP: ${{ env.TEST_RESOURCE_GROUP }}";
           echo "TEST_CLUSTER_NAME: ${{ env.TEST_CLUSTER_NAME }}";
           echo "TEST_DEPLOYMENT_MANIFEST_PATH: ${{ env.TEST_DEPLOYMENT_MANIFEST_PATH }}"
-
+      # Checks out the repository this file is in
       - uses: actions/checkout@v3
 
+      # Logs in with your Azure credentials
       - name: Azure login
         uses: azure/login@v1
         with:
-          auth-type: 'managed-identity'
-
+          client-id: '944dffe9-4597-4af5-8cef-0b7a29ed7941'
+          tenant-id: '50640584-2a40-4216-a84b-9b3ee0f3f6cf'
+          subscription-id: '2ec90eda-9e79-4368-ad3f-64c607db819d'
+      # Pulling an image from Docker Hub to ACR. In a common CD scenario, 
+      # the build and push of developed code would be part of a controlled workflow. 
+      # The intention here is to show how environment variables and secrets work. 
+      # So we will simplify the process. 
       - name: Pull a sample image from Docker hub to ACR
         run: |
           az acr import --name ${{ env.TEST_AZURE_CONTAINER_REGISTRY }} --source docker.io/library/nginx:latest --image nginx:latest -g ${{ env.TEST_RESOURCE_GROUP }}
         continue-on-error: true
-
+      # Builds and pushes an image up to your Azure Container Registry
       - name: Build and push image to ACR
-        run: |
+        run: | 
           echo "You could build and push an image to ACR here by using the following commented commands"
-          ### az acr build --image "${{env.TEST_AZURE_CONTAINER_REGISTRY}}.azurecr.io/<your-repo-name>:${{ github.sha }}" -r "${{ env.TEST_AZURE_CONTAINER_REGISTRY }}" -g ${{ env.TEST_RESOURCE_GROUP }} .
-
-      - name: Checkout source code
+      ### az acr build --image "${{env.TEST_AZURE_CONTAINER_REGISTRY}}.azurecr.io/<your-repo-name>:${{ github.sha }}" -r "${{ env.TEST_AZURE_CONTAINER_REGISTRY }}" -g ${{ env.TEST_RESOURCE_GROUP }} .
+      - name: Checkout source code 
         uses: actions/checkout@v3
-
+      # Use kubelogin to configure your kubeconfig for Azure auth
       - name: Set up kubelogin for non-interactive login
         uses: azure/use-kubelogin@v1
         with:
           kubelogin-version: 'v0.0.25'
-
+      # Retrieves your Azure Kubernetes Service cluster's kubeconfig file
       - name: Get K8s context
         uses: azure/aks-set-context@v3
         with:
@@ -66,11 +68,11 @@ jobs:
           cluster-name: ${{ env.TEST_CLUSTER_NAME }}
           admin: 'true'
           use-kubelogin: 'true'
-
+      # Deploys application based on given manifest file
       - name: Deploys application
         uses: Azure/k8s-deploy@v4
         with:
           action: deploy
           manifests: ${{ env.TEST_DEPLOYMENT_MANIFEST_PATH }}
-          images: |
+          images: | 
             ${{ env.TEST_AZURE_CONTAINER_REGISTRY }}.azurecr.io/nginx:latest
